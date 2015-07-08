@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Map Generation</title>
+		<meta charset="utf-8"/>
+		<style>
+			.header {
+				width: 600px;
+			}
+			.note {
+				width: 600px;
+			}
+			canvas {
+				border: 2px solid #cccccc;
+			}
+			button {
+				border: none;
+				background-color: black;
+				color: white;
+			}
+			button:hover {
+				color: red;
+			}
+			span {
+				color: red;
+				text-decoration: underline;
+			}
+		</style>
+	</head>
+
+	<body onload="initCells();">
+		<div class="header">
+			<h3>This is a map/cave generator written by Philip Yoo.</h3>
+			<p>Initialize and then add as many times as you want. Look at the code for implementation. It takes a while to load since it is not optimized to be efficient. :P</p>
+		</div>
+		<canvas id="canvas" width="600" height="600"></canvas>
+		<div class="buttons">
+			<button onClick="initCells();">Refresh</button>
+			<button onClick="steps();">Add</button>
+			<button onClick="clearCanvas();">Clear</button>
+		</div>
+		<div class="inputs">
+			Iterations: <input type="text" id="iterations" value="10000">
+			Clean Up: <input type="text" id="cleanup" value="5">
+		</div>
+		<br/>
+		<div class="note">
+			<p><span>Notes:</span> The script used to generate the map uses randomness to "carve" out oceans. Originally, I wanted to create a cave generator using "blind ants" where a number of ants randomly wander around carving out dirt to create a cave system. I still have remnants of the blind ants generator in the script in the comments. I then decided the random patterns look better as land and water so I shifted over to map generation. Here, I have three workers carving out oceans. Each add iterates over several thousand times where the workers blindly carve and move around. It also cleans up the map by removing blocks depending on the number of empty blocks around it. I found out that clean up factor 4 creates the best-looking maps, but anything above seems to create more detailed yet "dirtier" maps. I started this short project as a way to learn more Javascript and some HTML/CSS.</p>
+		</div>
+		<script>
+			//Global variables
+			var blockSize = 1;	//power of 2 preferably 1, 2, 4, 8, etc.
+			var rowSize;		//The number of blocks in a row
+			var cArray;			//The cell array that holds block information
+			var antArray;		//The array of ant information
+
+			//Initializes the grid
+			function initCells()
+			{
+				clearCanvas();
+				var canvas = document.getElementById("canvas");
+				cArray = new Array(canvas.height/blockSize);
+
+				rowSize = canvas.height/blockSize;
+
+				for (var i = 0; i < canvas.height; i++)
+				{
+					cArray[i] = new Array(canvas.width/blockSize);
+					for (var j = 0; j < canvas.width; j++)
+					{
+						cArray[i][j] = 1;	//initialized as land
+					}
+				}
+				initAnts();
+				drawCells(cArray);
+			}
+
+			//Initialize the array of ants/workers
+			function initAnts()
+			{
+				//antArray = [Math.floor((Math.random() * (rowSize-1)) + 1), Math.floor((Math.random() * (rowSize-1)) + (Math.pow(rowSize, 2) - rowSize))];	//top to bottom
+				antArray = [Math.floor((Math.random() * Math.pow(rowSize, 2)) + 1), Math.floor((Math.random() * Math.pow(rowSize, 2)) + 1), Math.floor((Math.random() * Math.pow(rowSize, 2)) + 1)];			//anywhere
+				for (var i = 0; i < antArray.length; i++)
+				{
+					cArray[getAntRow(antArray[i])][getAntCol(antArray[i])] = 2;	//set them as 2 so you can see them at the start
+				}
+			}
+
+			//Draws the grid of cells with filled rectangles
+			function drawCells()
+			{
+				clearCanvas();
+				var canvas = document.getElementById("canvas");
+				var context = canvas.getContext("2d");
+
+				for (var i = 0; i < cArray.length; i++)
+				{
+					for (var j = 0; j < cArray[i].length; j++)
+					{
+						if (cArray[i][j] == 1)	//ground
+						{
+							//context.fillStyle = "#1f0000";		//rock
+							context.fillStyle = "#007700";	//land
+							context.fillRect(j*blockSize, i*blockSize, blockSize, blockSize);
+						}
+						else if (cArray[i][j] == 0)	//empty
+						{
+							//context.fillStyle = "#7f4747";		//emptiness
+							context.fillStyle = "#0033ff";	//water
+							context.fillRect(j*blockSize, i*blockSize, blockSize, blockSize);
+						}
+						else
+						{
+							context.fillStyle = "#ff0000";
+							context.fillRect(j*blockSize, i*blockSize, blockSize, blockSize);	//ants/workers
+						}
+					}
+				}
+			}
+
+			//Wipes the canvas
+			function clearCanvas()
+			{
+				var canvas = document.getElementById("canvas");
+				var context = canvas.getContext("2d");
+				context.clearRect(0, 0, canvas.width, canvas.height);
+			}
+
+			//Each ant/worker takes a step and carves out land
+			function step()
+			{
+				for (var i = 0; i < antArray.length; i++)
+				{
+					var rand = Math.floor((Math.random() * 4) + 1);	//Random direction selected
+					if (rand == 1)	//left
+					{
+						if ((getAntCol(antArray[i]) - 1) > 0)
+						{
+							antArray[i] -= 1;
+						}
+					}
+					else if (rand == 2) //right
+					{
+						if ((getAntCol(antArray[i]) + 1) < (rowSize-1))
+						{
+							antArray[i] += 1;
+						}
+					}
+					else if (rand == 3)	//up
+					{
+						if ((getAntRow(antArray[i]) - 1) > 0)
+						{
+							antArray[i] -= rowSize;
+						}
+					}
+					else				//down
+					{
+						if ((getAntRow(antArray[i]) + 1) < (rowSize-1))
+						{
+							antArray[i] += rowSize;
+						}
+					}
+
+					cArray[getAntRow(antArray[i])][getAntCol(antArray[i])] = 0;	//set new location as ocean
+				}
+				//drawCells();
+			}
+
+			//Each ant/worker steps the number of times specified in the text field (preferably several thousand times)
+			function steps()
+			{
+				cuFactor = parseInt(document.getElementById("cleanup").value);
+				for (var i = 0; i < parseInt(document.getElementById("iterations").value); i++)
+				{
+					step();
+				}
+				cleanUp();	//cleans up
+			}
+
+			//Gets the row of the ant in the grid provided its position
+			function getAntRow(antPos)
+			{
+				return Math.floor(antPos / (canvas.width / blockSize));
+			}
+			//Gets the column of the ant in the grid provided its position
+			function getAntCol(antPos)
+			{
+				return antPos % (canvas.width / blockSize);
+			}
+
+			//Cleans up grid depending on the number of empty blocks around each block
+			function cleanUp()
+			{
+				var canvas = document.getElementById("canvas");
+				for (var repeat = 0; repeat < 10; repeat++)
+				{
+					for (var i = 0; i < cArray.length; i++)
+					{
+						for (var j = 0; j < cArray[i].length; j++)
+						{
+							//Find the number of empty blocks around each block
+							var sum = 0;
+							if (cArray[i-1] !== undefined && cArray[i-1][j-1] !== undefined && cArray[i-1][j-1] == 0)
+							{
+								sum++;
+							}
+							if (cArray[i-1] !== undefined && cArray[i-1][j] !== undefined && cArray[i-1][j] == 0)
+							{
+								sum++;
+							}
+							if (cArray[i-1] !== undefined && cArray[i-1][j+1] !== undefined && cArray[i-1][j+1] == 0)
+							{
+								sum++;
+							}
+							if (cArray[i][j-1] !== undefined && cArray[i][j-1] == 0)
+							{
+								sum++;
+							}
+							if (cArray[i][j+1] !== undefined && cArray[i][j+1] == 0)
+							{
+								sum++;
+							}
+							if (cArray[i+1] !== undefined && cArray[i+1][j-1] !== undefined && cArray[i+1][j-1] == 0)
+							{
+								sum++;
+							}
+							if (cArray[i+1] !== undefined && cArray[i+1][j] !== undefined && cArray[i+1][j] == 0)
+							{
+								sum++;
+							}
+							if (cArray[i+1] !== undefined && cArray[i+1][j+1] !== undefined && cArray[i+1][j+1] == 0)
+							{
+								sum++;
+							}
+
+							//If the number of empty blocks is greater than the Clean Up Factor, then make that block empty
+							//Works best with cuFactor = 4+
+							if (sum > cuFactor)
+							{
+								cArray[i][j] = 0;
+							}
+						}
+					}
+				}
+				drawCells();	//Redraws the grid
+			}
+		</script>
+	</body>
+</html>
