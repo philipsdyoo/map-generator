@@ -4,6 +4,10 @@
 		<title>Map Generation</title>
 		<meta charset="utf-8"/>
 		<style>
+			body {
+				font-family: Comic Sans MS;
+				font-size: 12px;
+			}
 			.header {
 				width: 600px;
 			}
@@ -31,21 +35,24 @@
 	<body onload="initCells();">
 		<div class="header">
 			<h3>This is a map/cave generator written by Philip Yoo.</h3>
-			<p>Initialize and then add as many times as you want. Look at the code for implementation. It takes a while to load since it is not optimized to be efficient. :P</p>
+			<p>Initialize and then add as many times as you want. Look at the code for implementation. It takes a while to load since it is not optimized to be efficient performance-wise and memory-wise. The play button plays the function over a set interval and can cause the page to become unresponsive and slow, so set the number of iterations to a lower number and the canvas size smaller.</p>
 		</div>
-		<canvas id="canvas" width="600" height="600"></canvas>
+		<canvas id="canvas" width="512" height="512"></canvas>
 		<div class="buttons">
 			<button onClick="initCells();">Refresh</button>
 			<button onClick="steps();">Add</button>
+			<button onClick="repeatSteps();" id="play">Play</button>
+			<button onClick="stopSteps();">Stop</button>
 			<button onClick="clearCanvas();">Clear</button>
 		</div>
 		<div class="inputs">
 			Iterations: <input type="text" id="iterations" value="10000">
 			Clean Up: <input type="text" id="cleanup" value="5">
+			Canvas Size: <input type="text" id="size" value="512">
 		</div>
 		<br/>
 		<div class="note">
-			<p><span>Notes:</span> The script used to generate the map uses randomness to "carve" out oceans. Originally, I wanted to create a cave generator using "blind ants" where a number of ants randomly wander around carving out dirt to create a cave system. I still have remnants of the blind ants generator in the script in the comments. I then decided the random patterns look better as land and water so I shifted over to map generation. Here, I have three workers carving out oceans. Each add iterates over several thousand times where the workers blindly carve and move around. It also cleans up the map by removing blocks depending on the number of empty blocks around it. I found out that clean up factor 4 creates the best-looking maps, but anything above seems to create more detailed yet "dirtier" maps. I started this short project as a way to learn more Javascript and some HTML/CSS.</p>
+			<p><span>Notes:</span> The script used to generate the map uses randomness to "carve" out oceans. Originally, I wanted to create a cave generator using "blind ants" where a number of ants randomly wanders around carving out dirt to create a cave system. I still have remnants of the blind ants generator in the script in the comments. I then decided the random patterns look better as land and water so I shifted over to map generation. Here, I have three workers carving out oceans. Each add iterates over several thousand times where the workers blindly carve and move around. It also cleans up the map by removing blocks depending on the number of empty blocks around it. I found out that clean up factor 4 creates the best-looking maps, but anything above seems to create more detailed yet "dirtier" maps. I started this short project as a way to learn more Javascript and some HTML/CSS.</p>
 		</div>
 		<script>
 			//Global variables
@@ -53,13 +60,18 @@
 			var rowSize;		//The number of blocks in a row
 			var cArray;			//The cell array that holds block information
 			var antArray;		//The array of ant information
-			var cuFactor;
+			var cuFactor;		//Clean Up Factor used in cleanup()
+			var player;			//setInterval player
 
 			//Initializes the grid
 			function initCells()
 			{
-				clearCanvas();
+				document.getElementById("play").disabled = false;
 				var canvas = document.getElementById("canvas");
+				var newSize = parseInt(document.getElementById("size").value);
+				canvas.width = newSize;
+				canvas.height = newSize;
+				clearCanvas();
 				cArray = new Array(canvas.height/blockSize);
 
 				rowSize = canvas.height/blockSize;
@@ -176,6 +188,18 @@
 					step();
 				}
 				cleanUp();	//cleans up
+			}
+
+			function repeatSteps()
+			{
+				document.getElementById("play").disabled = true;
+				player = window.setInterval(function() {steps();}, 1000);
+			}
+
+			function stopSteps()
+			{
+				document.getElementById("play").disabled = false;
+				window.clearInterval(player);
 			}
 
 			//Gets the row of the ant in the grid provided its position
