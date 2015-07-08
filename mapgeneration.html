@@ -35,7 +35,7 @@
 	<body onload="initCells();">
 		<div class="header">
 			<h3>This is a map/cave generator written by Philip Yoo.</h3>
-			<p>Initialize and then add as many times as you want. Look at the code for implementation. It takes a while to load since it is not optimized to be efficient performance-wise and memory-wise. The play button plays the function over a set interval and can cause the page to become unresponsive and slow, so set the number of iterations to a lower number and the canvas size smaller.</p>
+			<p>Initialize and then add as many times as you want. Look at the code for implementation. It takes a while to load since it is not optimized to be efficient performance-wise and memory-wise. The play button plays the function over a set interval and can cause your browser to become unresponsive and slow, so set the number of iterations to a lower number and the canvas size smaller.</p>
 		</div>
 		<canvas id="canvas" width="512" height="512"></canvas>
 		<div class="buttons">
@@ -44,6 +44,7 @@
 			<button onClick="repeatSteps();" id="play">Play</button>
 			<button onClick="stopSteps();">Stop</button>
 			<button onClick="clearCanvas();">Clear</button>
+			<button onClick="findIslands();">Remove Islands</button>
 		</div>
 		<div class="inputs">
 			Iterations: <input type="text" id="iterations" value="10000">
@@ -120,6 +121,11 @@
 						{
 							//context.fillStyle = "#7f4747";		//emptiness
 							context.fillStyle = "#0033ff";	//water
+							context.fillRect(j*blockSize, i*blockSize, blockSize, blockSize);
+						}
+						else if (cArray[i][j] == 3)	//marked land
+						{
+							context.fillStyle = "#d68533";	//marked land
 							context.fillRect(j*blockSize, i*blockSize, blockSize, blockSize);
 						}
 						else
@@ -216,58 +222,132 @@
 			//Cleans up grid depending on the number of empty blocks around each block
 			function cleanUp()
 			{
-				var canvas = document.getElementById("canvas");
-				for (var repeat = 0; repeat < 10; repeat++)
+				for (var i = 0; i < cArray.length; i++)
 				{
-					for (var i = 0; i < cArray.length; i++)
+					for (var j = 0; j < cArray[i].length; j++)
 					{
-						for (var j = 0; j < cArray[i].length; j++)
-						{
-							//Find the number of empty blocks around each block
-							var sum = 0;
-							if (cArray[i-1] !== undefined && cArray[i-1][j-1] !== undefined && cArray[i-1][j-1] == 0)
-							{
-								sum++;
-							}
-							if (cArray[i-1] !== undefined && cArray[i-1][j] !== undefined && cArray[i-1][j] == 0)
-							{
-								sum++;
-							}
-							if (cArray[i-1] !== undefined && cArray[i-1][j+1] !== undefined && cArray[i-1][j+1] == 0)
-							{
-								sum++;
-							}
-							if (cArray[i][j-1] !== undefined && cArray[i][j-1] == 0)
-							{
-								sum++;
-							}
-							if (cArray[i][j+1] !== undefined && cArray[i][j+1] == 0)
-							{
-								sum++;
-							}
-							if (cArray[i+1] !== undefined && cArray[i+1][j-1] !== undefined && cArray[i+1][j-1] == 0)
-							{
-								sum++;
-							}
-							if (cArray[i+1] !== undefined && cArray[i+1][j] !== undefined && cArray[i+1][j] == 0)
-							{
-								sum++;
-							}
-							if (cArray[i+1] !== undefined && cArray[i+1][j+1] !== undefined && cArray[i+1][j+1] == 0)
-							{
-								sum++;
-							}
+						//Find the number of empty blocks around each block
+						var sum = numTypeNeighbors(i, j, 0);
 
-							//If the number of empty blocks is greater than the Clean Up Factor, then make that block empty
-							//Works best with cuFactor = 4+
-							if (sum > cuFactor)
-							{
-								cArray[i][j] = 0;
-							}
+						//If the number of empty blocks is greater than the Clean Up Factor, then make that block empty
+						//Works best with cuFactor = 4+
+						if (sum > cuFactor)
+						{
+							cArray[i][j] = 0;
 						}
 					}
 				}
 				drawCells();	//Redraws the grid
+			}
+
+			//Finds the number of neighbors of the given type for the cell at specified row and column
+			function numTypeNeighbors(row, col, type)
+			{
+				var sum = 0;
+				if (cArray[row-1] !== undefined && cArray[row-1][col-1] !== undefined && cArray[row-1][col-1] == type)
+				{
+					sum++;
+				}
+				if (cArray[row-1] !== undefined && cArray[row-1][col] !== undefined && cArray[row-1][col] == type)
+				{
+					sum++;
+				}
+				if (cArray[row-1] !== undefined && cArray[row-1][col+1] !== undefined && cArray[row-1][col+1] == type)
+				{
+					sum++;
+				}
+				if (cArray[row][col-1] !== undefined && cArray[row][col-1] == type)
+				{
+					sum++;
+				}
+				if (cArray[row][col+1] !== undefined && cArray[row][col+1] == type)
+				{
+					sum++;
+				}
+				if (cArray[row+1] !== undefined && cArray[row+1][col-1] !== undefined && cArray[row+1][col-1] == type)
+				{
+					sum++;
+				}
+				if (cArray[row+1] !== undefined && cArray[row+1][col] !== undefined && cArray[row+1][col] == type)
+				{
+					sum++;
+				}
+				if (cArray[row+1] !== undefined && cArray[row+1][col+1] !== undefined && cArray[row+1][col+1] == type)
+				{
+					sum++;
+				}
+				return sum;
+			}
+
+			function findIslands()
+			{
+				//Initial land block to be marked; always land by the way the code works
+				cArray[0][0] = 3;
+
+				//Four different passes; obviously not the most efficient way
+				for (var i = 0; i < cArray.length; i++)
+				{
+					for (var j = 0; j < cArray[i].length; j++)
+					{
+						var sumMarked = numTypeNeighbors(i, j, 3);
+						if (sumMarked > 0 && cArray[i][j] == 1)
+						{
+							cArray[i][j] = 3;
+						}
+					}
+				}
+
+				for (var i = cArray.length - 1; i >= 0; i--)
+				{
+					for (var j = cArray[i].length - 1; j >= 0; j--)
+					{
+						var sumMarked = numTypeNeighbors(i, j, 3);
+						if (sumMarked > 0 && cArray[i][j] == 1)
+						{
+							cArray[i][j] = 3;
+						}
+					}
+				}
+
+				for (var i = cArray.length - 1; i >= 0; i--)
+				{
+					for (var j = 0; j < cArray[i].length; j++)
+					{
+						var sumMarked = numTypeNeighbors(i, j, 3);
+						if (sumMarked > 0 && cArray[i][j] == 1)
+						{
+							cArray[i][j] = 3;
+						}
+					}
+				}
+
+				for (var i = 0; i < cArray.length; i++)
+				{
+					for (var j = cArray[i].length - 1; j >= 0; j--)
+					{
+						var sumMarked = numTypeNeighbors(i, j, 3);
+						if (sumMarked > 0 && cArray[i][j] == 1)
+						{
+							cArray[i][j] = 3;
+						}
+					}
+				}
+
+				for (var i = 0; i < cArray.length; i++)
+				{
+					for (var j = 0; j < cArray[i].length; j++)
+					{
+						if (cArray[i][j] == 3)
+						{
+							cArray[i][j] = 1;
+						}
+						else if (cArray[i][j] == 1)
+						{
+							cArray[i][j] = 0;
+						}
+					}
+				}
+				drawCells();
 			}
 		</script>
 	</body>
