@@ -4,9 +4,10 @@
 		<title>Map Generation</title>
 		<meta charset="utf-8"/>
 		<style>
+			/* CSS Stylesheet */
 			body {
 				font-family: Comic Sans MS;
-				font-size: 12px;
+				font-size: 14px;
 			}
 			.header {
 				width: 600px;
@@ -31,11 +32,11 @@
 			}
 		</style>
 	</head>
-
+	<!-- HTML BODY -->
 	<body onload="initCells();">
 		<div class="header">
-			<h3>This is a map/cave generator written by Philip Yoo.</h3>
-			<p>Initialize and then add as many times as you want. Look at the code for implementation. It takes a while to load since it is not optimized to be efficient performance-wise and memory-wise. The play button plays the function over a set interval and can cause your browser to become unresponsive and slow, so set the number of iterations to a lower number and the canvas size smaller.</p>
+			<h3>Map Generator by Philip Yoo.</h3>
+			<p>Initialize and then add as many times as you want. Look at the code for implementation. It takes a while to load since it is not optimized to be efficient performance-wise and memory-wise. The play button plays the add function every second and can cause your browser to become unresponsive and slow. So, set the number of iterations to a lower number and the canvas size smaller. You can also remove islands smaller than a specified size (# of pixels).</p>
 		</div>
 		<canvas id="canvas" width="512" height="512"></canvas>
 		<div class="buttons">
@@ -43,18 +44,18 @@
 			<button onClick="steps();">Add</button>
 			<button onClick="repeatSteps();" id="play">Play</button>
 			<button onClick="stopSteps();">Stop</button>
-			<button onClick="clearCanvas();">Clear</button>
-			<button onClick="findIslands();">Remove Islands</button>
+			<!--<button onClick="clearCanvas();">Clear</button> Commented out since it was rarely being used; may remove altogether-->
+			<button onClick="findIslands();" id="remove">Remove Islands</button>
 		</div>
 		<div class="inputs">
-			Iterations: <input type="text" id="iterations" value="10000">
-			Clean Up: <input type="text" id="cleanup" value="5">
-			Canvas Size: <input type="text" id="size" value="512">
+			Iterations: <input type="text" id="iterations" size="5" value="1000">
+			Clean Up: <input type="text" id="cleanup" size="2" value="4">
+			Canvas Size: <input type="text" id="size" size="4" value="512">
+			Min. Island: <input type="text" id="island" size="3" value="20">
 		</div>
-		<br/>
-		<div class="note">
-			<p><span>Notes:</span> The script used to generate the map uses randomness to "carve" out oceans. Originally, I wanted to create a cave generator using "blind ants" where a number of ants randomly wanders around carving out dirt to create a cave system. I still have remnants of the blind ants generator in the script in the comments. I then decided the random patterns look better as land and water so I shifted over to map generation. Here, I have three workers carving out oceans. Each add iterates over several thousand times where the workers blindly carve and move around. It also cleans up the map by removing blocks depending on the number of empty blocks around it. I found out that clean up factor 4 creates the best-looking maps, but anything above seems to create more detailed yet "dirtier" maps. I started this short project as a way to learn more Javascript and some HTML/CSS.</p>
-		</div>
+
+		<!--***************** JAVASCRIPT BELOW *****************-->
+
 		<script>
 			//Global variables
 			var blockSize = 1;	//power of 2 preferably 1, 2, 4, 8, etc.
@@ -63,6 +64,7 @@
 			var antArray;		//The array of ant information
 			var cuFactor;		//Clean Up Factor used in cleanup()
 			var player;			//setInterval player
+			var islandArray;	//global array for island pixels
 
 			//Initializes the grid
 			function initCells()
@@ -92,18 +94,18 @@
 			//Initialize the array of ants/workers
 			function initAnts()
 			{
-				//antArray = [Math.floor((Math.random() * (rowSize-1)) + 1), Math.floor((Math.random() * (rowSize-1)) + (Math.pow(rowSize, 2) - rowSize))];	//top to bottom
-				antArray = [Math.floor((Math.random() * Math.pow(rowSize, 2)) + 1), Math.floor((Math.random() * Math.pow(rowSize, 2)) + 1), Math.floor((Math.random() * Math.pow(rowSize, 2)) + 1)];			//anywhere
+				antArray = [{row: Math.floor(Math.random() * (rowSize - 1)) + 1, col: Math.floor(Math.random() * (rowSize - 1)) + 1}, {row: Math.floor(Math.random() * (rowSize - 1)) + 1, col: Math.floor(Math.random() * (rowSize - 1)) + 1}, {row: Math.floor(Math.random() * (rowSize - 1)) + 1, col: Math.floor(Math.random() * (rowSize - 1)) + 1}];
+
 				for (var i = 0; i < antArray.length; i++)
 				{
-					cArray[getAntRow(antArray[i])][getAntCol(antArray[i])] = 2;	//set them as 2 so you can see them at the start
+					cArray[antArray[i].row][antArray[i].col] = 2;	//set them as 2 so you can see them at the start
 				}
 			}
 
 			//Draws the grid of cells with filled rectangles
 			function drawCells()
 			{
-				clearCanvas();
+				clearCanvas();	//Clear canvas so blocks aren't just piling up on the screen
 				var canvas = document.getElementById("canvas");
 				var context = canvas.getContext("2d");
 
@@ -153,34 +155,34 @@
 					var rand = Math.floor((Math.random() * 4) + 1);	//Random direction selected
 					if (rand == 1)	//left
 					{
-						if ((getAntCol(antArray[i]) - 1) > 0)
+						if ((antArray[i].col - 1) > 0)
 						{
-							antArray[i] -= 1;
+							antArray[i].col -= 1;
 						}
 					}
 					else if (rand == 2) //right
 					{
-						if ((getAntCol(antArray[i]) + 1) < (rowSize-1))
+						if ((antArray[i].col + 1) < (rowSize-1))
 						{
-							antArray[i] += 1;
+							antArray[i].col += 1;
 						}
 					}
 					else if (rand == 3)	//up
 					{
-						if ((getAntRow(antArray[i]) - 1) > 0)
+						if ((antArray[i].row - 1) > 0)
 						{
-							antArray[i] -= rowSize;
+							antArray[i].row -= 1;
 						}
 					}
 					else				//down
 					{
-						if ((getAntRow(antArray[i]) + 1) < (rowSize-1))
+						if ((antArray[i].row + 1) < (rowSize-1))
 						{
-							antArray[i] += rowSize;
+							antArray[i].row += 1;
 						}
 					}
 
-					cArray[getAntRow(antArray[i])][getAntCol(antArray[i])] = 0;	//set new location as ocean
+					cArray[antArray[i].row][antArray[i].col] = 0;	//set new location as ocean
 				}
 				//drawCells();
 			}
@@ -199,24 +201,15 @@
 			function repeatSteps()
 			{
 				document.getElementById("play").disabled = true;
+				document.getElementById("remove").disabled = true;
 				player = window.setInterval(function() {steps();}, 1000);
 			}
 
 			function stopSteps()
 			{
 				document.getElementById("play").disabled = false;
+				document.getElementById("remove").disabled = false;
 				window.clearInterval(player);
-			}
-
-			//Gets the row of the ant in the grid provided its position
-			function getAntRow(antPos)
-			{
-				return Math.floor(antPos / (canvas.width / blockSize));
-			}
-			//Gets the column of the ant in the grid provided its position
-			function getAntCol(antPos)
-			{
-				return antPos % (canvas.width / blockSize);
 			}
 
 			//Cleans up grid depending on the number of empty blocks around each block
@@ -279,18 +272,20 @@
 				return sum;
 			}
 
+			//Finds the islands and marks them. Marked islands then are determined whether or not they are removed by size
 			function findIslands()
 			{
-				//Initial land block to be marked; always land by the way the code works
+				//Initial land block to be marked; should be guaranteed to be land
 				cArray[0][0] = 3;
 
-				//Four different passes; obviously not the most efficient way
+				//Four different passes from the four corners
+				//Not the most efficient way and also may not behave correctly 100% of the time; rarely mis-identifies
 				for (var i = 0; i < cArray.length; i++)
 				{
 					for (var j = 0; j < cArray[i].length; j++)
 					{
 						var sumMarked = numTypeNeighbors(i, j, 3);
-						if (sumMarked > 0 && cArray[i][j] == 1)
+						if (sumMarked > 0 && (cArray[i][j] == 1 || cArray[i][j] == 2))	//extra line to remove red worker blocks
 						{
 							cArray[i][j] = 3;
 						}
@@ -333,6 +328,10 @@
 					}
 				}
 
+				//Array initialized for all island pixels
+				islandArray = new Array();
+
+				//Revert Block states
 				for (var i = 0; i < cArray.length; i++)
 				{
 					for (var j = 0; j < cArray[i].length; j++)
@@ -343,12 +342,104 @@
 						}
 						else if (cArray[i][j] == 1)
 						{
-							cArray[i][j] = 0;
+							cArray[i][j] = 3;
+						}
+
+						//Add islands to the island array
+						if (cArray[i][j] == 3)
+						{
+							var ilPx = {row: i, col: j};
+							islandArray.push(ilPx);
 						}
 					}
 				}
+				countIslands();		//Determine which pixels are part of which islands and then removes smaller islands
+
+				//Recolors larger islands back to green
+				for (var i = 0; i < cArray.length; i++)
+				{
+					for (var j = 0; j < cArray[i].length; j++)
+					{
+						if (cArray[i][j] == 3)
+						{
+							cArray[i][j] = 1;
+						}
+					}
+				}
+
 				drawCells();
 			}
+
+			//Determines whether two blocks are adjacent neighbors or not
+			function isNeighbor(row1, col1, row2, col2)
+			{
+				if (((row1 == (row2-1)) || (row1 == (row2)) || (row1 == (row2+1))) && ((col1 == (col2-1)) || col1 == (col2) || col1 == (col2+1)))
+					return true;
+
+				return false;
+			}
+
+			//Groups the island pixels into island groups
+			//KNOWN BUG: Islands with "antlers" are sometimes split in half due to how this algorithm was written
+			function countIslands()
+			{
+				//Set up for island pixel grouping
+				var islandCollection = new Array();
+				var counter = 0;
+				var firstElement = {row: islandArray[0].row, col: islandArray[0].col, isID: counter};
+				islandCollection.push(firstElement);
+
+				//Groups pixels into islands
+				for (var i = 1; i < islandArray.length; i++)
+				{
+					var nomatch = 0;
+					for (var j = 0; j < islandCollection.length; j++)
+					{
+						if (isNeighbor(islandArray[i].row, islandArray[i].col, islandCollection[j].row, islandCollection[j].col))
+						{
+							islandCollection.push({row: islandArray[i].row, col: islandArray[i].col, isID: islandCollection[j].isID});
+							nomatch++;
+							break;
+						}
+					}
+					if (nomatch == 0)
+					{
+						counter++;
+						islandCollection.push({row: islandArray[i].row, col: islandArray[i].col, isID: counter});
+					}
+				}
+
+				//Determines the sizes of each islands depending on how many pixels it contains
+				var islandSizes = new Array(counter+1);
+				for (var i = 0; i < islandSizes.length; i++)
+				{
+					islandSizes[i] = 0;
+				}
+				for (var i = 0; i < islandCollection.length; i++)
+				{
+					islandSizes[islandCollection[i].isID] += 1;
+				}
+				//console.log("There are " + (counter+1) + " islands.");
+				//console.log(JSON.stringify(islandCollection));
+				//console.log(JSON.stringify(islandSizes));
+
+				//Removes the smaller islands as specified by the text field
+				for (var i = 0; i < islandSizes.length; i++)
+				{
+					if (islandSizes[i] < parseInt(document.getElementById("island").value))
+					{
+						for (var j = 0; j < islandCollection.length; j++)
+						{
+							if (i == islandCollection[j].isID)
+							{
+								cArray[islandCollection[j].row][islandCollection[j].col] = 0;
+							}
+						}
+					}
+				}
+			}
+
+			//TODO: Fix logic in island algorithm
 		</script>
 	</body>
 </html>
